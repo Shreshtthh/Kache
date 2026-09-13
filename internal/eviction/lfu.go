@@ -74,6 +74,8 @@ func (l *LFU) RecordAccess(key string) {
 
 // Evict removes and returns the least frequently used key.
 // Ties are broken by recency (oldest at the back of the bucket list).
+// Evict removes and returns the least frequently used key.
+// Ties are broken by recency (oldest at the back of the bucket list).
 func (l *LFU) Evict() (string, bool) {
 	bucket, ok := l.freqBuckets[l.minFreq]
 	if !ok || bucket.Len() == 0 {
@@ -88,10 +90,26 @@ func (l *LFU) Evict() (string, bool) {
 
 	if bucket.Len() == 0 {
 		delete(l.freqBuckets, l.minFreq)
+		// Update minFreq to the next populated bucket.
+		if len(l.items) > 0 {
+			l.minFreq = l.findMinFreq()
+		}
 	}
 
 	return entry.key, true
 }
+
+// findMinFreq scans freqBuckets for the lowest frequency with entries.
+func (l *LFU) findMinFreq() int {
+	min := int(^uint(0) >> 1) // MaxInt
+	for freq, bucket := range l.freqBuckets {
+		if bucket.Len() > 0 && freq < min {
+			min = freq
+		}
+	}
+	return min
+}
+
 
 // Remove explicitly removes a key from the eviction tracker.
 func (l *LFU) Remove(key string) {
