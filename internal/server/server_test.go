@@ -23,22 +23,11 @@ func startTestServer(t *testing.T, ctx context.Context) string {
 	eng := engine.NewKVEngine(sl, lru, tm, 10000)
 	exec := command.NewExecutor(eng)
 
-	srv := NewServer("127.0.0.1:0", exec) // port 0 = OS picks a free port
+	srv := NewServer("127.0.0.1:0", exec)
+	go srv.ListenAndServe(ctx)
+	<-srv.Ready()
 
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- srv.ListenAndServe(ctx)
-	}()
-
-	// Wait for the server to start.
-	for i := 0; i < 50; i++ {
-		time.Sleep(10 * time.Millisecond)
-		if srv.Addr() != "127.0.0.1:0" {
-			return srv.Addr()
-		}
-	}
-	t.Fatal("server did not start in time")
-	return ""
+	return srv.Addr()
 }
 
 // sendCommand connects to the server, sends a command, and returns the response.

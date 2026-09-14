@@ -25,17 +25,11 @@ func startServer(t *testing.T, ctx context.Context) string {
 
 	srv := server.NewServer("127.0.0.1:0", exec)
 	go srv.ListenAndServe(ctx)
+	<-srv.Ready()
 
-	// Wait for server to start.
-	for i := 0; i < 50; i++ {
-		time.Sleep(10 * time.Millisecond)
-		if srv.Addr() != "127.0.0.1:0" {
-			return srv.Addr()
-		}
-	}
-	t.Fatal("server did not start")
-	return ""
+	return srv.Addr()
 }
+
 
 func TestClientPing(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())

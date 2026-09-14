@@ -19,6 +19,7 @@ type Server struct {
 	listener net.Listener
 	wg       sync.WaitGroup
 	active   int64 // atomic — number of active connections
+	ready chan struct{}
 }
 
 // NewServer creates a new TCP server.
@@ -26,6 +27,7 @@ func NewServer(addr string, executor *command.Executor) *Server {
 	return &Server{
 		addr:     addr,
 		executor: executor,
+		ready: make(chan struct{}),
 	}
 }
 
@@ -37,6 +39,7 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		return fmt.Errorf("failed to listen on %s: %w", s.addr, err)
 	}
 	s.listener = ln
+	close(s.ready)
 	log.Printf("kache server listening on %s", s.addr)
 
 	// Goroutine to close the listener when context is cancelled.
@@ -129,4 +132,8 @@ func (s *Server) Addr() string {
 		return s.listener.Addr().String()
 	}
 	return s.addr
+}
+
+func (s *Server) Ready() <-chan struct{}{
+	return s.ready
 }
